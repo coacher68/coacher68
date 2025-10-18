@@ -1,4 +1,4 @@
-## Hi there 👋
+## Reliable Magazine - Maintenance and Reliability for Industrial Professionals
 
 [![Visit Reliable](https://img.shields.io/badge/Visit_Reliable-Reliamag.com-informational)](https://reliamag.com)
 
