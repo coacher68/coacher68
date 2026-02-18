@@ -20,8 +20,11 @@ async def main():
             url="https://www.example.com",
             config=crawl_config,
         )
-        print("Crawl successful!" if result.success else "Crawl failed!")
-        print(f"\nMarkdown content (first 500 chars):\n{result.markdown[:500]}")
+        if result.success:
+            print("Crawl successful!")
+            print(f"\nMarkdown content (first 500 chars):\n{result.markdown[:500]}")
+        else:
+            print(f"Crawl failed: {result.error_message}")
 
 
 if __name__ == "__main__":
