@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pyo
+debug_page_load.png
+debug_page_source.html
+fanuc_integrators.csv
