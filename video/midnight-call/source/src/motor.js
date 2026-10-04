@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { noiseTexture, canvas, makeNoise2, fbm } from './textures.js';
-import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, mulberry32, noise1 } from './timeline.js';
+import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, mulberry32 } from './timeline.js';
 
 const GREEN = new THREE.Color(0x11a84b);
 const AMBER = new THREE.Color(0xffa51f);
@@ -58,29 +58,6 @@ function concreteTexture(seed = 3) {
   ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(S, 2); ctx.moveTo(2, 0); ctx.lineTo(2, S); ctx.stroke();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
-  return t;
-}
-
-function gaugeTexture() {
-  const S = 512, c = canvas(S, S), ctx = c.getContext('2d');
-  const cx = S / 2, cy = S / 2, R = S * 0.46;
-  ctx.fillStyle = '#f4f2ec';
-  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25; // 270 degree sweep
-  const band = (f0, f1, col) => {
-    ctx.strokeStyle = col; ctx.lineWidth = S * 0.06;
-    ctx.beginPath(); ctx.arc(cx, cy, R * 0.78, a0 + (a1 - a0) * f0, a0 + (a1 - a0) * f1); ctx.stroke();
-  };
-  band(0.30, 0.70, '#16a34a'); band(0.70, 0.85, '#f59e0b'); band(0.85, 1.0, '#dc2626');
-  ctx.strokeStyle = '#1c1f22';
-  for (let i = 0; i <= 20; i++) {
-    const a = a0 + (a1 - a0) * (i / 20);
-    const r0 = R * (i % 5 === 0 ? 0.6 : 0.66), r1 = R * 0.72;
-    ctx.lineWidth = i % 5 === 0 ? 7 : 3;
-    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
 
@@ -227,49 +204,6 @@ export class Motor {
     add(alongX(new THREE.CylinderGeometry(0.13, 0.13, 0.03, 48)), pumpPaint, 1.47, 0, 0, pump);
     add(alongX(new THREE.CylinderGeometry(0.085, 0.085, 3.0, 48)), steel, 2.98, 0, 0, pump);
 
-    // ---------------- Sensors (wireless condition monitoring)
-    const sensorBody = new THREE.MeshStandardMaterial({ color: 0xc4cacf, roughness: 0.3, metalness: 0.9 });
-    const sensorCap = new THREE.MeshStandardMaterial({ color: 0x23262a, roughness: 0.5 });
-    this.ledMats = [];
-    const makeSensor = (pos, normal) => {
-      const g = new THREE.Group();
-      g.position.copy(pos);
-      g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal.clone().normalize());
-      add(new THREE.CylinderGeometry(0.017, 0.017, 0.03, 32), sensorBody, 0, 0.015, 0, g);
-      add(new THREE.CylinderGeometry(0.018, 0.018, 0.026, 32), sensorCap, 0, 0.043, 0, g);
-      const led = new THREE.MeshBasicMaterial({ color: GREEN.clone().multiplyScalar(2.0) });
-      this.ledMats.push(led);
-      const l = new THREE.Mesh(new THREE.CircleGeometry(0.0035, 16), led);
-      l.position.set(0, 0.0565, 0); l.rotation.x = -Math.PI / 2;
-      g.add(l);
-      motor.add(g);
-      return g;
-    };
-    const a1 = 0.55; // DE bearing (vibration)
-    this.sVib = makeSensor(new THREE.Vector3(0.345, Math.sin(a1) * 0.205, Math.cos(a1) * 0.205), new THREE.Vector3(0.25, Math.sin(a1), Math.cos(a1)));
-    const a2 = 0.62; // NDE (temperature)
-    this.sTemp = makeSensor(new THREE.Vector3(-0.3, Math.sin(a2) * 0.266, Math.cos(a2) * 0.266), new THREE.Vector3(0, Math.sin(a2), Math.cos(a2)));
-    const a3 = -0.30; // lower front of frame (operating condition: flux/current)
-    this.sCond = makeSensor(new THREE.Vector3(-0.13, Math.sin(a3) * 0.247, Math.cos(a3) * 0.247), new THREE.Vector3(0, Math.sin(a3), Math.cos(a3)));
-
-    // ---------------- Discharge pressure gauge (needle trembles while running)
-    const gauge = new THREE.Group();
-    gauge.position.set(1.16, Hc + 0.43, -0.12);
-    scene.add(gauge);
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xa9aeb3, roughness: 0.38, metalness: 1.0 });
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.08, 16).rotateX(Math.PI / 2), steel);
-    stem.position.set(0, 0, 0.1); gauge.add(stem);
-    const gBody = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.035, 48).rotateX(Math.PI / 2), chrome);
-    gBody.position.set(0, 0, 0.155); gBody.castShadow = true; gauge.add(gBody);
-    const dial = new THREE.Mesh(new THREE.CircleGeometry(0.056, 48), new THREE.MeshStandardMaterial({ map: gaugeTexture(), roughness: 0.7, metalness: 0.0, color: 0xc9c6bf }));
-    dial.position.set(0, 0, 0.1735); gauge.add(dial);
-    const needle = this.needle = new THREE.Group();
-    needle.position.set(0, 0, 0.175); gauge.add(needle);
-    const nMesh = new THREE.Mesh(new THREE.BoxGeometry(0.0035, 0.045, 0.001), new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.4 }));
-    nMesh.position.y = 0.018; needle.add(nMesh);
-    const hub = new THREE.Mesh(new THREE.CircleGeometry(0.006, 16), new THREE.MeshStandardMaterial({ color: 0x1c1f22 }));
-    hub.position.z = 0.0012; needle.add(hub);
-
     // ---------------- Plant environment
     const floorTex = concreteTexture();
     floorTex.repeat.set(10, 10);
@@ -356,17 +290,6 @@ export class Motor {
     this.Hc = Hc;
   }
 
-  // world position helper for anchors
-  worldOf(obj, local = new THREE.Vector3(0, 0.06, 0)) {
-    obj.updateMatrixWorld(true);
-    return local.clone().applyMatrix4(obj.matrixWorld);
-  }
-
-  project(v) {
-    const p = v.clone().project(this.camera);
-    return { x: (p.x * 0.5 + 0.5) * 1920, y: (-p.y * 0.5 + 0.5) * 1080 };
-  }
-
   update(t) {
     const cam = this.camera;
     // camera: close "running normally" detail -> pull back to the 3/4 hero shot -> slow orbit
@@ -385,21 +308,7 @@ export class Motor {
     cam.updateProjectionMatrix();
     this.scene.updateMatrixWorld(true);
 
-    // sensor LEDs: green transmit blinks, turning amber as the change develops
-    const warn = smooth(seg(t, T.sev[0] + 0.35, T.sev[1] + 0.1));
-    this.ledMats.forEach((m, i) => {
-      const ph = (t * 0.9 + i * 0.37) % 1.0;
-      const on = ph < 0.1 ? 1.0 : 0.28;
-      m.color.copy(GREEN).lerp(AMBER, warn).multiplyScalar(2.4 * on);
-    });
-    // gauge needle: steady pressure with a little pulsation
-    this.needle.rotation.z = -0.35 + 0.035 * Math.sin(t * 21) + 0.025 * noise1(t * 7.0, 4);
-
-    this.anchors = {
-      vib: this.project(this.worldOf(this.sVib, new THREE.Vector3(0, 0.05, 0))),
-      temp: this.project(this.worldOf(this.sTemp, new THREE.Vector3(0, 0.05, 0))),
-      cond: this.project(this.worldOf(this.sCond, new THREE.Vector3(0, 0.05, 0))),
-    };
+    this.anchors = {};
 
     // focus on the target; defocus in from the previous shot and out to the next
     const v = tgt.clone().applyMatrix4(cam.matrixWorldInverse);

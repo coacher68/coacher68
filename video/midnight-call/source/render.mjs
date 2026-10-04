@@ -1,6 +1,6 @@
 // Render driver: serves this folder, opens the page in headless Chromium, renders frames to PNG.
 // Usage: node render.mjs --frames 0,30,60 --out preview
-//        node render.mjs --range 0-449 --out frames
+//        node render.mjs --range 0-494 --out frames
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';

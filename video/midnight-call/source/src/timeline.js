@@ -1,6 +1,6 @@
 // Timing + easing helpers. All animation is a pure function of time t (seconds).
 export const FPS = 30;
-export const DURATION = 15;
+export const DURATION = 16.5;
 export const FRAMES = FPS * DURATION;
 
 // Master timeline (seconds). Every scene and overlay reads its beats from here.

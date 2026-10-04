@@ -4,7 +4,7 @@
   "type": "module",
   "description": "10s silent social video: 'The midnight phone call that never happens' (Reliable).",
   "scripts": {
-    "render": "node render.mjs --range 0-449 --out frames",
+    "render": "node render.mjs --range 0-494 --out frames",
     "encode": "./encode.sh frames ../midnight-call_1920x1080_30fps.mp4"
   },
   "dependencies": {

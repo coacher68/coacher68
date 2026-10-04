@@ -1,6 +1,6 @@
 # The Midnight Phone Call That Never Happens
 
-15-second horizontal social video for Reliable — 1920×1080, 16:9, 30 fps, no audio.
+16.5-second horizontal social video for Reliable — 1920×1080, 16:9, 30 fps, no audio.
 
 **File:** [`midnight-call_1920x1080_30fps.mp4`](midnight-call_1920x1080_30fps.mp4) (H.264 High, BT.709, yuv420p, faststart, no audio track)
 
@@ -11,9 +11,9 @@
 | Time | Shot |
 | --- | --- |
 | 0:00–0:02.5 | Bedside table in blue moonlight. An amber clock reads **1:59 AM**; the phone beside it is dark. Slow push-in. |
-| 0:02.5–0:08 | Close-up of a running motor (sensor LED blinking green), pulling back to the motor and pump. Vibration, temperature and operating-condition traces run green, develop amber changes, then converge into one amber early-warning indicator. |
+| 0:02.5–0:08 | Close-up of a running motor, pulling back to the motor and pump. Vibration, temperature and operating-condition traces run green, develop amber changes, then converge into one amber early-warning indicator. No sensors are shown on the machinery. |
 | 0:08–0:12.5 | The indicator becomes a work-order card on a daytime calendar: **EARLY WARNING** (amber) → **PLANNED REPAIR — 10:00 AM** (Reliable green) on Tuesday. Saturday is marked as the projected failure; a green span shows four days of lead time. |
-| 0:12.5–0:15 | Cut back to the bedside. **1:59 → 2:00 AM**. Focus pulls to the phone — it stays dark. **MORE WARNING TIME** (green) **CHANGES EVERYTHING.** |
+| 0:12.5–0:16.5 | Cut back to the bedside. **1:59 → 2:00 AM**. Focus pulls to the phone — it stays dark. **MORE WARNING TIME** (green) **CHANGES EVERYTHING.** holds for the last ~2.6 s. |
 
 Color: Reliable green `#11a84b` for healthy/planned, amber for the early warning, orange-red for the projected failure; blue night, an industrial-blue motor with a safety-yellow guard, warm daylight on the calendar.
 
@@ -25,7 +25,7 @@ The video is generated in code (Three.js in headless Chromium, frames encoded wi
 cd source
 npm install            # three, Inter font, playwright
 npx playwright install chromium   # if no Chromium is available
-npm run render         # writes frames/f0000.png … f0449.png
+npm run render         # writes frames/f0000.png … f0494.png
 npm run encode         # requires ffmpeg
 ```
 

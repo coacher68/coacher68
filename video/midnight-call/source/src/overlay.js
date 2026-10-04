@@ -83,9 +83,9 @@ function checkGlyph(ctx, r, d, color) {
 export class Overlay {
   constructor() {
     this.panels = [
-      { key: 'temp', title: 'TEMPERATURE', x: 112, y: 168, anchor: 'temp', delay: 0.0 },
-      { key: 'vib', title: 'VIBRATION', x: W - 112 - PANEL_W, y: 168, anchor: 'vib', delay: 0.16 },
-      { key: 'cond', title: 'OPERATING CONDITION', x: 112, y: 790, anchor: 'cond', delay: 0.32 },
+      { key: 'temp', title: 'TEMPERATURE', x: 112, y: 168, delay: 0.0 },
+      { key: 'vib', title: 'VIBRATION', x: W - 112 - PANEL_W, y: 168, delay: 0.16 },
+      { key: 'cond', title: 'OPERATING CONDITION', x: 112, y: 790, delay: 0.32 },
     ];
   }
 
@@ -98,7 +98,7 @@ export class Overlay {
   }
 
   // ---------------------------------------------------------------- S2: traces
-  drawTraces(ctx, t, anchors) {
+  drawTraces(ctx, t) {
     const sev = smooth(seg(t, T.sev[0], T.sev[1]));
     const warnK = smooth(seg(t, T.sev[0] + 0.35, T.sev[1] + 0.1));
     const fadeOut = 1 - smooth(seg(t, T.conv + 0.2, T.conv + 0.85));
@@ -110,24 +110,6 @@ export class Overlay {
       if (alpha <= 0.003) continue;
       const reveal = easeOutCubic(seg(t, a0 + 0.1, a0 + 0.1 + T.reveal));
       const dy = (1 - appear) * 14;
-      const anc = anchors[p.anchor];
-
-      // leader line: sensor -> panel edge
-      const edge = { x: p.x < W / 2 ? p.x + PANEL_W : p.x, y: p.y + (p.y < H / 2 ? PANEL_H : 0) + dy };
-      const lk = easeInOutCubic(seg(t, a0 - 0.08, a0 + 0.38));
-      if (anc && lk > 0) {
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        const ex = lerp(anc.x, edge.x, lk), ey = lerp(anc.y, edge.y, lk);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(anc.x, anc.y); ctx.lineTo(ex, ey); ctx.stroke();
-        const mc = mixHex(GREEN_LINE, AMBER, warnK);
-        ctx.fillStyle = mc;
-        ctx.beginPath(); ctx.arc(anc.x, anc.y, 3.4, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = mc; ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.arc(anc.x, anc.y, 9, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore();
-      }
 
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -383,7 +365,7 @@ export class Overlay {
 
   draw(ctx, t, { motor, cal }) {
     ctx.clearRect(0, 0, W, H);
-    if (t >= T.panel0 - 0.2 && t < T.arrive + 0.7) this.drawTraces(ctx, t, motor || {});
+    if (t >= T.panel0 - 0.2 && t < T.arrive + 0.7) this.drawTraces(ctx, t);
     if (t >= T.arrive - 0.1 && t < T.cut) this.drawWarning(ctx, t, cal);
     if (t >= T.cut) this.drawFinal(ctx, t);
   }

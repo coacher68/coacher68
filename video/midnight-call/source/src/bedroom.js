@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { woodTextures, noiseTexture, blindsTexture, roundedRectShapeArc, textTexture } from './textures.js';
-import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, clamp } from './timeline.js';
+import { T, DURATION, seg, lerp, easeInOutSine, easeInOutCubic, smooth, clamp } from './timeline.js';
 
 const DIGIT_COLOR = new THREE.Color(0xffa63a);   // warm amber LED
 const DIGIT_GAIN = 1.85;
@@ -293,7 +293,7 @@ export class Bedroom {
       exposure = lerp(1.0, 0.04, smooth(seg(t, T.s1Dim[0], T.s1Dim[1])));
       this.setTime('159');
     } else {
-      const k = easeInOutSine(seg(t, T.cut, T.cut + 2.5));
+      const k = easeInOutSine(seg(t, T.cut, DURATION));
       pos = new THREE.Vector3(lerp(-2.0, -2.8, k), lerp(18.5, 17.8, k), lerp(52, 48.5, k));
       tgt = new THREE.Vector3(lerp(-7.6, -7.8, k), lerp(-1.5, -1.6, k), lerp(-4.0, -4.4, k));
       // rack focus: clock -> phone
