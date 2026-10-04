@@ -1,9 +1,11 @@
 // Scene 3: daytime planning calendar lying on a desk in soft window light.
 import * as THREE from 'three';
 import { canvas, makeNoise2, fbm } from './textures.js';
-import { seg, lerp, easeInOutSine, easeOutCubic, easeInOutCubic, smooth, clamp } from './timeline.js';
+import { T, seg, lerp, easeInOutSine, easeOutCubic, easeInOutCubic, smooth, clamp } from './timeline.js';
 
 export const GREEN = '#11a84b';
+const RISK = '#e8542b';        // projected-failure orange-red
+const RISK_SOFT = '#ffb79c';
 const TW = 2560, TH = 1440;          // sheet texture size (px)
 const SW = 16, SH = 9;               // sheet size (world units)
 
@@ -46,7 +48,7 @@ function wrenchIcon(ctx, cx, cy, s, color, bg) {
 export class Calendar {
   constructor(renderer) {
     const scene = this.scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xd3d8db);
+    scene.background = new THREE.Color(0xddd5c8);
     this.camera = new THREE.PerspectiveCamera(24, 16 / 9, 0.1, 300);
 
     // desk
@@ -84,14 +86,14 @@ export class Calendar {
   makeDesk() {
     const W = 2048, H = 1152, c = canvas(W, H), ctx = c.getContext('2d');
     const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#e4e8ea'); g.addColorStop(0.55, '#d4d9dc'); g.addColorStop(1, '#c3c9cd');
+    g.addColorStop(0, '#f1e9dc'); g.addColorStop(0.55, '#e2d7c6'); g.addColorStop(1, '#cdbfa9');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     // soft window-blind light bands (daylight)
     ctx.save();
     ctx.translate(W * 0.5, H * 0.5); ctx.rotate(-0.42); ctx.translate(-W * 0.5, -H * 0.5);
     ctx.filter = 'blur(26px)';
     for (let i = -6; i < 16; i++) {
-      ctx.fillStyle = 'rgba(255,255,255,0.20)';
+      ctx.fillStyle = 'rgba(255,246,226,0.32)';
       ctx.fillRect(-400, i * 120, W + 800, 58);
     }
     ctx.restore();
@@ -111,13 +113,13 @@ export class Calendar {
     // very subtle daylight falloff + blinds bands to multiply over the sheet
     const c = canvas(TW, TH), ctx = c.getContext('2d');
     const g = ctx.createLinearGradient(0, 0, TW, TH);
-    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(60,70,78,0.07)');
+    g.addColorStop(0, 'rgba(255,250,240,0)'); g.addColorStop(1, 'rgba(90,64,36,0.07)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, TW, TH);
     ctx.save();
     ctx.translate(TW * 0.5, TH * 0.5); ctx.rotate(-0.42); ctx.translate(-TW * 0.5, -TH * 0.5);
     ctx.filter = 'blur(30px)';
     for (let i = -8; i < 20; i++) {
-      ctx.fillStyle = 'rgba(70,80,90,0.035)';
+      ctx.fillStyle = 'rgba(96,72,44,0.04)';
       ctx.fillRect(-600, i * 150 + 75, TW + 1200, 72);
     }
     ctx.restore();
@@ -141,8 +143,8 @@ export class Calendar {
       ctx.save();
       ctx.globalAlpha = st.fail;
       ctx.beginPath(); ctx.rect(x + 6, gridTop + 4, colW - 12, gridBottom - gridTop - 8); ctx.clip();
-      ctx.fillStyle = '#f1f3f4'; ctx.fillRect(x, gridTop, colW, gridBottom - gridTop);
-      ctx.strokeStyle = '#d3d8dc'; ctx.lineWidth = 5;
+      ctx.fillStyle = '#fff2ec'; ctx.fillRect(x, gridTop, colW, gridBottom - gridTop);
+      ctx.strokeStyle = RISK_SOFT; ctx.lineWidth = 5;
       for (let k = -50; k < 14; k++) {
         ctx.beginPath(); ctx.moveTo(x + k * 34, gridTop); ctx.lineTo(x + k * 34 + 1300, gridTop + 1300 * 1.2); ctx.stroke();
       }
@@ -172,7 +174,7 @@ export class Calendar {
       const x = colX(i) + 30;
       ctx.letterSpacing = '5px';
       ctx.font = '600 32px Inter';
-      ctx.fillStyle = i === CAL.failDay && st.fail > 0 ? '#5d656b' : '#8a9298';
+      ctx.fillStyle = i === CAL.failDay && st.fail > 0 ? RISK : '#8a9298';
       ctx.fillText(days[i], x, headerTop + 92);
       ctx.letterSpacing = '0px';
       ctx.font = '600 92px Inter';
@@ -194,15 +196,15 @@ export class Calendar {
       const x = colX(CAL.failDay);
       ctx.save();
       ctx.globalAlpha = st.fail;
-      ctx.setLineDash([18, 14]); ctx.lineWidth = 5; ctx.strokeStyle = '#7d868c';
+      ctx.setLineDash([18, 14]); ctx.lineWidth = 6; ctx.strokeStyle = RISK;
       roundRect(ctx, x + 10, gridTop + 10, colW - 20, gridBottom - gridTop - 20, 18); ctx.stroke();
       ctx.setLineDash([]);
       const cy = gridTop + rowH * 4.5;
       const sc = 1 + 0.12 * (1 - easeOutCubic(seg(st.fail, 0, 1)));
       ctx.fillStyle = '#ffffff';
       ctx.beginPath(); ctx.arc(x + colW / 2, cy, 78 * sc, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#d5dadd'; ctx.lineWidth = 3; ctx.stroke();
-      hazardIcon(ctx, x + colW / 2, cy - 4, 92 * sc, '#3a4146');
+      ctx.strokeStyle = RISK_SOFT; ctx.lineWidth = 4; ctx.stroke();
+      hazardIcon(ctx, x + colW / 2, cy - 4, 92 * sc, RISK);
       ctx.restore();
     }
 
@@ -261,9 +263,9 @@ export class Calendar {
 
   state(t) {
     return {
-      fail: easeOutCubic(seg(t, 5.6, 6.1)),
-      event: seg(t, 5.95, 6.4),
-      bracket: seg(t, 6.75, 7.4),
+      fail: easeOutCubic(seg(t, T.fail[0], T.fail[1])),
+      event: seg(t, T.event[0], T.event[1]),
+      bracket: seg(t, T.bracket[0], T.bracket[1]),
     };
   }
 
@@ -273,8 +275,8 @@ export class Calendar {
     if (key !== this.lastKey) { this.drawSheet(st); this.lastKey = key; }
 
     const cam = this.camera;
-    const k = easeInOutSine(seg(t, 5.0, 8.0));
-    const arrive = easeOutCubic(seg(t, 5.0, 6.0));
+    const k = easeInOutSine(seg(t, T.c0, T.cut));
+    const arrive = easeOutCubic(seg(t, T.c0, T.c0 + 1.0));
     const tgt = new THREE.Vector3(lerp(0.5, 0.62, k), 0, lerp(0.06, 0.12, k));
     const el = lerp(1.21, 1.19, k) + 0.04 * (1 - arrive);  // elevation (rad)
     const az = lerp(-0.045, -0.025, k);
@@ -295,14 +297,14 @@ export class Calendar {
     const focusPt = this.texToWorld(TW * 0.5, TH * 0.45);
     const v = focusPt.clone().applyMatrix4(cam.matrixWorldInverse);
     let focus = -v.z;
-    const inK = smooth(seg(t, 5.4, 5.95));
+    const inK = smooth(seg(t, T.cFocus[0], T.cFocus[1]));
     focus = lerp(3.0, focus, inK);
     return {
-      exposure: 1.0, toneMix: 0.0, vignette: 0.16, vigPow: 2.4, sat: 1.0, contrast: 1.0,
+      exposure: 1.0, toneMix: 0.0, vignette: 0.16, vigPow: 2.4, sat: 1.06, contrast: 1.0,
       dof: { focus, cocScale: 70, deadZone: 0.012, maxCoc: 22, radScale: 0.9 },
       bloom: { strength: 0, radius: 0, threshold: 1 },
       grain: 0.008,
-      clear: 0xd3d8db,
+      clear: 0xddd5c8,
     };
   }
 }

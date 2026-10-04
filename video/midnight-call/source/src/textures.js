@@ -42,7 +42,7 @@ function toTexture(c, srgb = true, repeat = false) {
 }
 
 // Dark, fine-grained wood (grayscale). Grain runs along x.
-export function woodTextures(w = 2048, h = 1024, seed = 7) {
+export function woodTextures(w = 2048, h = 1024, seed = 7, tint = [1.02, 1.0, 0.98]) {
   const c = canvas(w, h), ctx = c.getContext('2d');
   const r = canvas(w, h), rctx = r.getContext('2d');
   const img = ctx.createImageData(w, h), rimg = rctx.createImageData(w, h);
@@ -67,7 +67,7 @@ export function woodTextures(w = 2048, h = 1024, seed = 7) {
       const base = 26; // dark charcoal-brown-neutral
       const val = Math.max(0, Math.min(255, base * v));
       const o = (y * w + x) * 4;
-      img.data[o] = val * 1.02; img.data[o + 1] = val * 1.0; img.data[o + 2] = val * 0.98; img.data[o + 3] = 255;
+      img.data[o] = val * tint[0]; img.data[o + 1] = val * tint[1]; img.data[o + 2] = val * tint[2]; img.data[o + 3] = 255;
       const rv = 150 + 50 * (lines - 0.3) + 20 * (fine - 0.5);
       rimg.data[o] = rimg.data[o + 1] = rimg.data[o + 2] = Math.max(0, Math.min(255, rv)); rimg.data[o + 3] = 255;
     }

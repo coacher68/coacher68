@@ -3,17 +3,18 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { noiseTexture, canvas, makeNoise2, fbm } from './textures.js';
-import { seg, lerp, easeInOutSine, smooth, mulberry32 } from './timeline.js';
+import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, mulberry32, noise1 } from './timeline.js';
 
 const GREEN = new THREE.Color(0x11a84b);
+const AMBER = new THREE.Color(0xffa51f);
 
 function grilleTexture() {
   const S = 1024, c = canvas(S, S), ctx = c.getContext('2d');
-  ctx.fillStyle = '#5f666d';
+  ctx.fillStyle = '#2b5888';
   ctx.fillRect(0, 0, S, S);
   const cx = S / 2, cy = S / 2;
   // concentric rings of slots
-  ctx.fillStyle = '#0b0c0d';
+  ctx.fillStyle = '#070a0f';
   const rings = [[0.18, 18], [0.27, 26], [0.36, 34], [0.45, 42], [0.54, 50], [0.63, 58], [0.72, 66], [0.81, 74]];
   for (const [rr, n] of rings) {
     const r = rr * S / 2;
@@ -30,10 +31,10 @@ function grilleTexture() {
     }
   }
   // hub
-  ctx.fillStyle = '#6c737a';
+  ctx.fillStyle = '#30608f';
   ctx.beginPath(); ctx.arc(cx, cy, S * 0.07, 0, Math.PI * 2); ctx.fill();
   // outer rim darker ring
-  ctx.strokeStyle = '#5c6268'; ctx.lineWidth = S * 0.03;
+  ctx.strokeStyle = '#264f7c'; ctx.lineWidth = S * 0.03;
   ctx.beginPath(); ctx.arc(cx, cy, S * 0.47, 0, Math.PI * 2); ctx.stroke();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
@@ -60,20 +61,44 @@ function concreteTexture(seed = 3) {
   return t;
 }
 
+function gaugeTexture() {
+  const S = 512, c = canvas(S, S), ctx = c.getContext('2d');
+  const cx = S / 2, cy = S / 2, R = S * 0.46;
+  ctx.fillStyle = '#f4f2ec';
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+  const a0 = Math.PI * 0.75, a1 = Math.PI * 2.25; // 270 degree sweep
+  const band = (f0, f1, col) => {
+    ctx.strokeStyle = col; ctx.lineWidth = S * 0.06;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.78, a0 + (a1 - a0) * f0, a0 + (a1 - a0) * f1); ctx.stroke();
+  };
+  band(0.30, 0.70, '#16a34a'); band(0.70, 0.85, '#f59e0b'); band(0.85, 1.0, '#dc2626');
+  ctx.strokeStyle = '#1c1f22';
+  for (let i = 0; i <= 20; i++) {
+    const a = a0 + (a1 - a0) * (i / 20);
+    const r0 = R * (i % 5 === 0 ? 0.6 : 0.66), r1 = R * 0.72;
+    ctx.lineWidth = i % 5 === 0 ? 7 : 3;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+
 function alongX(geo) { geo.rotateZ(-Math.PI / 2); return geo; } // cylinder/lathe Y axis -> +X
 
 export class Motor {
   constructor(renderer, envTex) {
     const scene = this.scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0d0f11);
+    scene.background = new THREE.Color(0x0a1626);
     scene.environment = envTex;
-    scene.environmentIntensity = 0.22;
-    scene.fog = new THREE.FogExp2(0x0d0f11, 0.055);
+    scene.environmentIntensity = 0.13;
+    scene.fog = new THREE.FogExp2(0x0a1626, 0.06);
     this.camera = new THREE.PerspectiveCamera(25, 16 / 9, 0.1, 80);
 
-    const paint = new THREE.MeshStandardMaterial({ color: 0x555c64, roughness: 0.5, metalness: 0.2 });
-    const paintDark = new THREE.MeshStandardMaterial({ color: 0x353a40, roughness: 0.55, metalness: 0.15 });
-    const pumpPaint = new THREE.MeshStandardMaterial({ color: 0x4d535a, roughness: 0.45, metalness: 0.2 });
+    const paint = new THREE.MeshStandardMaterial({ color: 0x2c5a8c, roughness: 0.5, metalness: 0.16 });   // industrial motor blue
+    const paintDark = new THREE.MeshStandardMaterial({ color: 0x2c3036, roughness: 0.55, metalness: 0.15 });
+    const guardPaint = new THREE.MeshStandardMaterial({ color: 0xd9a422, roughness: 0.55, metalness: 0.06 });  // safety yellow
+    const pumpPaint = new THREE.MeshStandardMaterial({ color: 0x434a53, roughness: 0.45, metalness: 0.2 });
     const steel = new THREE.MeshStandardMaterial({ color: 0xa9b0b6, roughness: 0.35, metalness: 1.0 });
     const blackRubber = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.7 });
     const concrete = new THREE.MeshStandardMaterial({ map: noiseTexture(512, 512, 31, 66, 12, 1.2), roughness: 0.92 });
@@ -138,7 +163,7 @@ export class Motor {
     const fcLen = 0.21, fcX = -0.33 - fcLen / 2;
     add(alongX(new THREE.CylinderGeometry(0.247, 0.252, fcLen, 128, 1, true)), paint, fcX, 0, 0, motor).material.side = THREE.DoubleSide;
     for (const rx of [-0.39, -0.48]) add(new THREE.TorusGeometry(0.251, 0.006, 8, 128).rotateY(Math.PI / 2), paint, rx, 0, 0, motor);
-    const capMat = new THREE.MeshStandardMaterial({ map: grilleTexture(), roughness: 0.5, metalness: 0.2, color: 0x8a9096 });
+    const capMat = new THREE.MeshStandardMaterial({ map: grilleTexture(), roughness: 0.48, metalness: 0.18, color: 0xffffff });
     const cap = add(new THREE.CircleGeometry(0.247, 128), capMat, -0.33 - fcLen, 0, 0, motor);
     cap.rotation.y = -Math.PI / 2;
     add(new THREE.TorusGeometry(0.247, 0.01, 10, 128).rotateY(Math.PI / 2), paint, -0.33 - fcLen, 0, 0, motor);
@@ -181,7 +206,7 @@ export class Motor {
     gShape.lineTo(-gw, gb);
     const gGeo = new THREE.ExtrudeGeometry(gShape, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2, curveSegments: 48 });
     gGeo.rotateY(Math.PI / 2);
-    add(gGeo, paintDark, 0.45, 0, 0, motor);
+    add(gGeo, guardPaint, 0.45, 0, 0, motor);
 
     // ---------------- Pump
     const pump = new THREE.Group();
@@ -227,16 +252,34 @@ export class Motor {
     const a3 = -0.30; // lower front of frame (operating condition: flux/current)
     this.sCond = makeSensor(new THREE.Vector3(-0.13, Math.sin(a3) * 0.247, Math.cos(a3) * 0.247), new THREE.Vector3(0, Math.sin(a3), Math.cos(a3)));
 
+    // ---------------- Discharge pressure gauge (needle trembles while running)
+    const gauge = new THREE.Group();
+    gauge.position.set(1.16, Hc + 0.43, -0.12);
+    scene.add(gauge);
+    const chrome = new THREE.MeshStandardMaterial({ color: 0xa9aeb3, roughness: 0.38, metalness: 1.0 });
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.08, 16).rotateX(Math.PI / 2), steel);
+    stem.position.set(0, 0, 0.1); gauge.add(stem);
+    const gBody = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.035, 48).rotateX(Math.PI / 2), chrome);
+    gBody.position.set(0, 0, 0.155); gBody.castShadow = true; gauge.add(gBody);
+    const dial = new THREE.Mesh(new THREE.CircleGeometry(0.056, 48), new THREE.MeshStandardMaterial({ map: gaugeTexture(), roughness: 0.7, metalness: 0.0, color: 0xc9c6bf }));
+    dial.position.set(0, 0, 0.1735); gauge.add(dial);
+    const needle = this.needle = new THREE.Group();
+    needle.position.set(0, 0, 0.175); gauge.add(needle);
+    const nMesh = new THREE.Mesh(new THREE.BoxGeometry(0.0035, 0.045, 0.001), new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.4 }));
+    nMesh.position.y = 0.018; needle.add(nMesh);
+    const hub = new THREE.Mesh(new THREE.CircleGeometry(0.006, 16), new THREE.MeshStandardMaterial({ color: 0x1c1f22 }));
+    hub.position.z = 0.0012; needle.add(hub);
+
     // ---------------- Plant environment
     const floorTex = concreteTexture();
     floorTex.repeat.set(10, 10);
     const floor = add(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55, metalness: 0.0, envMapIntensity: 0.6 }), 0, 0, 0, scene);
     floor.rotation.x = -Math.PI / 2;
     floor.castShadow = false;
-    const lineMat = new THREE.MeshStandardMaterial({ color: 0x8d9195, roughness: 0.6 });
+    const lineMat = new THREE.MeshStandardMaterial({ color: 0xc9970f, roughness: 0.65 });
     for (const lz of [1.45, -2.0]) { const ln = add(new THREE.PlaneGeometry(30, 0.09), lineMat, 0, 0.002, lz, scene); ln.rotation.x = -Math.PI / 2; ln.castShadow = false; }
 
-    const colMat = new THREE.MeshStandardMaterial({ color: 0x4a4f55, roughness: 0.55, metalness: 0.3 });
+    const colMat = new THREE.MeshStandardMaterial({ color: 0x46505c, roughness: 0.55, metalness: 0.3 });
     const column = (x, z) => {
       const g = new THREE.Group(); g.position.set(x, 0, z);
       add(new THREE.BoxGeometry(0.32, 9, 0.025), colMat, 0, 4.5, -0.15, g);
@@ -247,8 +290,10 @@ export class Motor {
     };
     column(-3.4, -3.2); column(3.0, -3.6); column(-9.0, -4.0); column(9.0, -4.5);
     const pipeMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.35, metalness: 0.7 });
-    for (const [py, pz, pr] of [[2.55, -2.7, 0.11], [2.85, -2.9, 0.08], [2.62, -3.3, 0.16], [3.2, -3.0, 0.06]]) {
-      add(alongX(new THREE.CylinderGeometry(pr, pr, 30, 32)), pipeMat, 0, py, pz, scene);
+    const redPipe = new THREE.MeshStandardMaterial({ color: 0xc0352b, roughness: 0.45, metalness: 0.1 });   // fire main
+    const greenPipe = new THREE.MeshStandardMaterial({ color: 0x2f9a5c, roughness: 0.45, metalness: 0.1 }); // cooling water
+    for (const [py, pz, pr, m] of [[2.55, -2.7, 0.11, greenPipe], [2.85, -2.9, 0.08, pipeMat], [2.62, -3.3, 0.16, pipeMat], [3.2, -3.0, 0.07, redPipe]]) {
+      add(alongX(new THREE.CylinderGeometry(pr, pr, 30, 32)), m, 0, py, pz, scene);
     }
     // vertical drop
     add(new THREE.CylinderGeometry(0.08, 0.08, 2.6, 32), pipeMat, -1.6, 1.3, -2.9, scene);
@@ -266,41 +311,43 @@ export class Motor {
     const mccMat = new THREE.MeshStandardMaterial({ color: 0x3f454b, roughness: 0.5, metalness: 0.3 });
     const indW = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(3.0) });
     const indG = new THREE.MeshBasicMaterial({ color: GREEN.clone().multiplyScalar(3.0) });
+    const indA = new THREE.MeshBasicMaterial({ color: AMBER.clone().multiplyScalar(3.0) });
+    const indR = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff3b2f).multiplyScalar(3.0) });
     const rnd = mulberry32(5);
     for (let i = 0; i < 9; i++) {
       const x = -7.5 + i * 0.85;
       add(new THREE.BoxGeometry(0.82, 2.3, 0.5), mccMat, x, 1.15, -9.0, scene);
       for (let j = 0; j < 2; j++) {
         if (rnd() < 0.35) continue;
-        const m = add(new THREE.CircleGeometry(0.025, 16), rnd() < 0.5 ? indG : indW, x - 0.2 + j * 0.12, 1.75 - rnd() * 0.4, -8.74, scene, false);
+        const r = rnd(); const m = add(new THREE.CircleGeometry(0.03, 16), r < 0.45 ? indG : r < 0.65 ? indR : r < 0.8 ? indA : indW, x - 0.2 + j * 0.12, 1.75 - rnd() * 0.4, -8.74, scene, false);
       }
     }
     // back wall
     add(new THREE.PlaneGeometry(80, 20), new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.9 }), 0, 10, -13, scene, false);
     // high-bay fixtures (emissive)
-    const hb = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xf1f4f7).multiplyScalar(6.0) });
+    const hb = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd9a8).multiplyScalar(6.0) });
     for (const [hx, hz] of [[-5, -4], [0, -5], [5, -5.5], [-9, -8], [9, -8], [-2, -10], [3, -11]]) {
       const d = add(new THREE.CylinderGeometry(0.28, 0.28, 0.06, 32), hb, hx, 6.4, hz, scene, false);
     }
 
     // ---------------- Lights
-    scene.add(new THREE.HemisphereLight(0x8d99a6, 0x141414, 0.22));
-    const key = new THREE.SpotLight(0xf5f6f7, 2.5, 0, 0.34, 0.8, 0);
+    scene.add(new THREE.HemisphereLight(0x5f80b4, 0x1a1510, 0.42));
+    const key = new THREE.SpotLight(0xfff0dc, 2.7, 0, 0.34, 0.8, 0);
     key.position.set(-0.6, 5.0, 3.0); key.target.position.set(0.2, 0.45, 0.05);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0002; key.shadow.normalBias = 0.015; key.shadow.radius = 3;
     key.shadow.camera.near = 1; key.shadow.camera.far = 12;
     scene.add(key, key.target);
-    const rimL = new THREE.SpotLight(0xe3e9ef, 12.0, 0, 0.3, 0.6, 0);
+    const rimL = new THREE.SpotLight(0x7fb4ff, 15.0, 0, 0.3, 0.6, 0);
     rimL.position.set(0.9, 4.2, -3.6); rimL.target.position.set(0.1, 0.6, 0);
     scene.add(rimL, rimL.target);
-    const top = new THREE.RectAreaLight(0xffffff, 5.0, 1.6, 0.5);
+    const top = new THREE.RectAreaLight(0xfff3e4, 5.0, 1.6, 0.5);
     top.position.set(0.25, 3.0, 0.4); top.lookAt(0.25, 0, 0.2);
     scene.add(top);
     // pools of light in the background from high-bays
-    for (const [px, pz, pi] of [[-4.6, -5.0, 3.0], [3.4, -6.0, 2.4], [-0.6, -3.4, 1.6], [7.5, -9.0, 2.0]]) {
-      const sp = new THREE.SpotLight(0xdfe5ea, pi, 0, 0.55, 0.9, 0);
+    for (const [px, pz, pi, pc] of [[-4.6, -5.0, 3.2, 0xffb36b], [3.4, -6.0, 2.8, 0x9cc4ff], [-0.6, -3.4, 1.6, 0xffc48a], [7.5, -9.0, 2.4, 0xffa95e]]) {
+      const sp = new THREE.SpotLight(pc, pi, 0, 0.55, 0.9, 0);
       sp.position.set(px, 6.3, pz); sp.target.position.set(px, 0, pz);
       scene.add(sp, sp.target);
     }
@@ -322,23 +369,31 @@ export class Motor {
 
   update(t) {
     const cam = this.camera;
-    const k = easeInOutSine(seg(t, 1.9, 5.6));
-    const az = lerp(0.72, 0.58, k);      // radians from +Z toward -X
-    const dist = lerp(4.15, 3.75, k);
-    const el = lerp(0.215, 0.19, k);
-    const tgt = new THREE.Vector3(lerp(0.2, 0.24, k), lerp(0.6, 0.62, k), 0);
+    // camera: close "running normally" detail -> pull back to the 3/4 hero shot -> slow orbit
+    const k1 = seg(t, T.m0, T.mPull[1]);
+    const k2 = easeInOutSine(seg(t, T.mPull[0], T.mOut[1]));
+    const close = { az: lerp(0.62, 0.5, k1), dist: lerp(1.3, 1.16, k1), el: lerp(0.15, 0.12, k1), tx: 0.3, ty: 0.7, tz: 0.15 };
+    const wide = { az: lerp(0.72, 0.56, k2), dist: lerp(4.05, 3.68, k2), el: lerp(0.215, 0.19, k2), tx: lerp(0.2, 0.24, k2), ty: lerp(0.6, 0.62, k2), tz: 0 };
+    const p = easeInOutCubic(seg(t, T.mPull[0], T.mPull[1]));
+    const az = lerp(close.az, wide.az, p);
+    const dist = Math.exp(lerp(Math.log(close.dist), Math.log(wide.dist), p));
+    const el = lerp(close.el, wide.el, p);
+    const tgt = new THREE.Vector3(lerp(close.tx, wide.tx, p), lerp(close.ty, wide.ty, p), lerp(close.tz, wide.tz, p));
     cam.position.set(tgt.x - Math.sin(az) * Math.cos(el) * dist, tgt.y + Math.sin(el) * dist, tgt.z + Math.cos(az) * Math.cos(el) * dist);
     cam.lookAt(tgt);
     cam.updateMatrixWorld();
     cam.updateProjectionMatrix();
     this.scene.updateMatrixWorld(true);
 
-    // LEDs blink briefly (transmit) at staggered times
+    // sensor LEDs: green transmit blinks, turning amber as the change develops
+    const warn = smooth(seg(t, T.sev[0] + 0.35, T.sev[1] + 0.1));
     this.ledMats.forEach((m, i) => {
       const ph = (t * 0.9 + i * 0.37) % 1.0;
-      const on = ph < 0.08 ? 1.0 : 0.25;
-      m.color.copy(GREEN).multiplyScalar(2.2 * on);
+      const on = ph < 0.1 ? 1.0 : 0.28;
+      m.color.copy(GREEN).lerp(AMBER, warn).multiplyScalar(2.4 * on);
     });
+    // gauge needle: steady pressure with a little pulsation
+    this.needle.rotation.z = -0.35 + 0.035 * Math.sin(t * 21) + 0.025 * noise1(t * 7.0, 4);
 
     this.anchors = {
       vib: this.project(this.worldOf(this.sVib, new THREE.Vector3(0, 0.05, 0))),
@@ -346,23 +401,21 @@ export class Motor {
       cond: this.project(this.worldOf(this.sCond, new THREE.Vector3(0, 0.05, 0))),
     };
 
-    // focus on motor body; transition in from defocus, and out to calendar
-    const focusPt = new THREE.Vector3(-0.05, 0.62, 0.18);
-    const v = focusPt.clone().applyMatrix4(cam.matrixWorldInverse);
+    // focus on the target; defocus in from the previous shot and out to the next
+    const v = tgt.clone().applyMatrix4(cam.matrixWorldInverse);
     let focus = -v.z;
-    const inK = smooth(seg(t, 1.95, 2.55));
-    const outK = smooth(seg(t, 4.9, 5.4));
-    // defocus by moving focus very near at the edges of the shot
-    const near = 0.35;
+    const inK = smooth(seg(t, T.mIn[0], T.mIn[1]));
+    const outK = smooth(seg(t, T.mOut[0], T.mOut[1]));
+    const near = 0.3;
     focus = lerp(near, focus, inK);
     focus = lerp(focus, near, outK);
-    const exposure = lerp(0.12, 1.0, smooth(seg(t, 1.95, 2.5))) * lerp(1.0, 1.9, outK);
+    const exposure = lerp(0.12, 1.0, smooth(seg(t, T.mIn[0], T.mIn[1] - 0.1))) * lerp(1.0, 1.9, outK);
 
     return {
-      exposure, vignette: 0.42, vigPow: 2.1, sat: 0.88, contrast: 1.05,
-      lift: [0.006, 0.007, 0.009], gain: [1, 1, 1],
+      exposure, vignette: 0.4, vigPow: 2.1, sat: 1.05, contrast: 1.06,
+      lift: [0.004, 0.008, 0.018], gain: [1, 1, 1],
       dof: { focus, cocScale: 95, deadZone: 0.02, maxCoc: 26, radScale: 0.8 },
-      bloom: { strength: 0.12, radius: 0.4, threshold: 1.6 },
+      bloom: { strength: 0.18, radius: 0.45, threshold: 1.5 },
       grain: 0.013,
     };
   }

@@ -1,7 +1,44 @@
 // Timing + easing helpers. All animation is a pure function of time t (seconds).
 export const FPS = 30;
-export const DURATION = 10;
+export const DURATION = 15;
 export const FRAMES = FPS * DURATION;
+
+// Master timeline (seconds). Every scene and overlay reads its beats from here.
+export const T = {
+  // 1 - bedside opening
+  s1Defocus: [2.02, 2.52],  // rack focus away
+  s1Dim: [2.05, 2.45],
+  x1: [2.42, 2.68],         // crossfade bedroom -> motor
+  // 2 - motor
+  m0: 2.36,
+  mIn: [2.38, 3.05],        // exposure + focus in
+  mPull: [3.7, 5.1],        // close-up -> wide pull-back
+  panel0: 4.72,             // first data panel appears (others stagger)
+  reveal: 0.95,             // trace draw duration
+  sev: [5.95, 7.0],         // developing change
+  conv: 6.92,               // packets start converging
+  arrive: 7.52,             // early-warning indicator lands
+  pill: [7.74, 8.1],        // "EARLY WARNING" opens
+  mOut: [7.72, 8.22],       // motor defocus + brighten
+  x2: [7.92, 8.28],         // crossfade motor -> calendar
+  // 3 - calendar
+  c0: 7.9,
+  cFocus: [8.2, 8.74],
+  morph: [7.98, 8.82],      // pill -> card
+  fail: [8.42, 8.92],       // projected failure marker
+  event: [8.98, 9.42],      // repair block on Tuesday
+  ptr: [9.02, 9.36],        // pointer card -> block
+  expand: [9.14, 9.52],
+  planned: [9.24, 9.66],
+  main: [9.36, 9.9],        // "PLANNED REPAIR — 10:00 AM"
+  bracket: [10.02, 10.72],  // lead-time span Tue -> Sat
+  // 4 - bedside ending
+  cut: 12.5,
+  flip: 12.95,              // 1:59 -> 2:00
+  rack: [13.15, 13.72],     // focus clock -> phone
+  text: [13.42, 13.86],
+  rule: [13.58, 14.1],
+};
 
 export const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 export const lerp = (a, b, k) => a + (b - a) * k;

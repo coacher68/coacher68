@@ -3,9 +3,10 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { woodTextures, noiseTexture, blindsTexture, roundedRectShapeArc, textTexture } from './textures.js';
-import { seg, lerp, easeInOutSine, easeInOutCubic, smooth, clamp } from './timeline.js';
+import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, clamp } from './timeline.js';
 
-const DIGIT_COLOR = new THREE.Color(0xeef3f5);
+const DIGIT_COLOR = new THREE.Color(0xffa63a);   // warm amber LED
+const DIGIT_GAIN = 1.85;
 
 // segment ids: a b c d e f g
 const DIGITS = {
@@ -47,7 +48,7 @@ const PhoneGlassShader = {
   name: 'PhoneGlass',
   uniforms: {
     color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null },
-    uStrength: { value: 1.0 }, uBase: { value: new THREE.Color(0x020203) }, uF0: { value: 0.045 },
+    uStrength: { value: 1.0 }, uBase: { value: new THREE.Color(0x020307) }, uF0: { value: 0.045 },
     uSheen: { value: 0.0 }, uBlur: { value: 0.016 },
   },
   vertexShader: /* glsl */`
@@ -93,7 +94,7 @@ export class Bedroom {
     const cam = this.camera = new THREE.PerspectiveCamera(24, 16 / 9, 2, 1500);
 
     // --- Table
-    const wood = woodTextures();
+    const wood = woodTextures(2048, 1024, 7, [1.16, 1.0, 0.84]);
     wood.map.repeat.set(1.4, 1.0); wood.rough.repeat.set(1.4, 1.0);
     const tableMat = new THREE.MeshStandardMaterial({ map: wood.map, roughnessMap: wood.rough, roughness: 0.78, metalness: 0.0, color: 0xffffff });
     const table = new THREE.Mesh(new RoundedBoxGeometry(150, 4, 78, 4, 0.6), tableMat);
@@ -102,7 +103,7 @@ export class Bedroom {
     scene.add(table);
 
     // --- Wall
-    const wallMat = new THREE.MeshStandardMaterial({ map: noiseTexture(512, 512, 21, 30, 6, 1.5), roughness: 0.95, metalness: 0 });
+    const wallMat = new THREE.MeshStandardMaterial({ map: noiseTexture(512, 512, 21, 34, 6, 1.5, [0.78, 0.9, 1.22]), roughness: 0.95, metalness: 0 });
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(600, 300), wallMat);
     wall.position.set(0, 60, -47);
     wall.receiveShadow = true;
@@ -146,9 +147,9 @@ export class Bedroom {
     // digits
     const DW = 2.15, DH = 3.55, DT = 0.42, DG = 0.06;
     const segs = digitSegments(DW, DH, DT, DG);
-    this.segOn = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(2.6) });
-    this.segOff = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(0.012) });
-    this.colonMat = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(2.6) });
+    this.segOn = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(DIGIT_GAIN) });
+    this.segOff = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(0.016) });
+    this.colonMat = new THREE.MeshBasicMaterial({ color: DIGIT_COLOR.clone().multiplyScalar(DIGIT_GAIN) });
     const disp = new THREE.Group();
     disp.position.set(0, CH / 2 - DH / 2 - 0.05, CD / 2 + 0.03);
     clock.add(disp);
@@ -178,13 +179,13 @@ export class Bedroom {
     addDigit(x); x += DW + 0.35;
     // AM indicator
     const amTex = textTexture('AM', { font: '600 84px Inter', w: 256, h: 128, letterSpacing: '6px' });
-    this.amMat = new THREE.MeshBasicMaterial({ map: amTex, transparent: true, color: DIGIT_COLOR.clone().multiplyScalar(2.0), depthWrite: false });
+    this.amMat = new THREE.MeshBasicMaterial({ map: amTex, transparent: true, color: DIGIT_COLOR.clone().multiplyScalar(DIGIT_GAIN * 0.8), depthWrite: false });
     const am = new THREE.Mesh(new THREE.PlaneGeometry(amW * 1.5, amW * 0.75), this.amMat);
     am.position.set(x + amW / 2 + 0.05, DH - 0.42, 0.001);
     disp.add(am);
 
     // light from display onto table
-    const disLight = new THREE.RectAreaLight(0xeef3f5, 6.0, 9.5, 3.4);
+    const disLight = new THREE.RectAreaLight(0xffa040, 7.5, 9.5, 3.4);
     disLight.position.set(0, CH / 2, CD / 2 + 0.25);
     disLight.lookAt(0, CH / 2 - 0.4, CD / 2 + 10);
     clock.add(disLight);
@@ -212,7 +213,7 @@ export class Bedroom {
     refl.rotation.x = -Math.PI / 2;
     refl.position.y = topY + 0.004;
     phone.add(refl);
-    refl.material.uniforms.uStrength.value = 0.42;
+    refl.material.uniforms.uStrength.value = 0.32;
     const rt = refl.getRenderTarget();
     rt.texture.generateMipmaps = true;
     rt.texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -233,9 +234,9 @@ export class Bedroom {
     phone.add(plug);
 
     // --- Lights
-    scene.add(new THREE.HemisphereLight(0x323a44, 0x080808, 0.55));
+    scene.add(new THREE.HemisphereLight(0x2f4c80, 0x07080b, 1.05));
 
-    const moon = this.moon = new THREE.DirectionalLight(0xdfe6ee, 1.1);
+    const moon = this.moon = new THREE.DirectionalLight(0x7da4ff, 2.0);
     moon.position.set(-70, 85, -55);
     moon.target.position.set(0, 0, 0);
     moon.castShadow = true;
@@ -245,7 +246,7 @@ export class Bedroom {
     moon.shadow.radius = 4;
     scene.add(moon, moon.target);
 
-    const blinds = this.blinds = new THREE.SpotLight(0xd8e0e8, 900, 0, 0.42, 0.35, 0);
+    const blinds = this.blinds = new THREE.SpotLight(0x86acff, 900, 0, 0.42, 0.35, 0);
     blinds.position.set(-150, 70, 30);
     blinds.target.position.set(10, 34, -47);
     blinds.map = blindsTexture();
@@ -253,10 +254,10 @@ export class Bedroom {
     blinds.shadow.mapSize.set(1024, 1024);
     blinds.shadow.bias = -0.0005;
     scene.add(blinds, blinds.target);
-    blinds.intensity = 4.5;
+    blinds.intensity = 6.5;
 
     // faint fill from the right so the phone's frame edge reads
-    const rim = new THREE.DirectionalLight(0xc9d2dc, 0.18);
+    const rim = new THREE.DirectionalLight(0x9db8ff, 0.32);
     rim.position.set(60, 30, -40);
     scene.add(rim);
 
@@ -278,35 +279,35 @@ export class Bedroom {
     const cam = this.camera;
     let pos, tgt, focusPt, cocScale, deadZone, maxCoc, exposure = 1.0;
     let fade = 1;
-    if (t < 4) {
+    if (t < T.cut) {
       // Opening: slow push in + gentle lateral drift; at end, defocus + dip for the transition
-      const k = easeInOutSine(seg(t, 0, 2.2));
+      const k = easeInOutSine(seg(t, 0, T.x1[1]));
       pos = new THREE.Vector3(lerp(3.5, 0.0, k), lerp(17.0, 15.6, k), lerp(55, 49, k));
       tgt = new THREE.Vector3(lerp(-6.5, -7.2, k), lerp(1.6, 1.4, k), lerp(-3.0, -3.6, k));
       focusPt = new THREE.Vector3(-9.0, 2.0, -4.5);
       cocScale = 3600; deadZone = 0.0031; maxCoc = 30;
       // transition: rack defocus to near, and dim
-      const tr = smooth(seg(t, 1.60, 2.12));
+      const tr = smooth(seg(t, T.s1Defocus[0], T.s1Defocus[1]));
       focusPt.lerp(new THREE.Vector3(-4, 1, 34), tr);
       deadZone = lerp(deadZone, 0.0, tr);
-      exposure = lerp(1.0, 0.12, smooth(seg(t, 1.68, 2.12)));
+      exposure = lerp(1.0, 0.04, smooth(seg(t, T.s1Dim[0], T.s1Dim[1])));
       this.setTime('159');
     } else {
-      const k = easeInOutSine(seg(t, 8.0, 10.0));
+      const k = easeInOutSine(seg(t, T.cut, T.cut + 2.5));
       pos = new THREE.Vector3(lerp(-2.0, -2.8, k), lerp(18.5, 17.8, k), lerp(52, 48.5, k));
       tgt = new THREE.Vector3(lerp(-7.6, -7.8, k), lerp(-1.5, -1.6, k), lerp(-4.0, -4.4, k));
       // rack focus: clock -> phone
-      const rf = easeInOutCubic(seg(t, 8.55, 9.1));
+      const rf = easeInOutCubic(seg(t, T.rack[0], T.rack[1]));
       const clockPt = new THREE.Vector3(-12.0, 3.6, -12.5);
       const phonePt = new THREE.Vector3(-6.4, 0.8, 3.5);
       focusPt = clockPt.clone().lerp(phonePt, rf);
       cocScale = 2700; deadZone = 0.0011; maxCoc = 30;
-      this.setTime(t < 8.35 ? '159' : '200');
+      this.setTime(t < T.flip ? '159' : '200');
     }
     // colon: soft 1 Hz pulse (never fully off)
-    const ph = ((t + 0.65) % 1.0);
+    const ph = ((t + 1 - (T.flip % 1)) % 1.0);   // colon lights exactly on the minute flip
     const colonK = ph < 0.5 ? 1.0 : 0.38;
-    this.colonMat.color.copy(DIGIT_COLOR).multiplyScalar(2.6 * colonK);
+    this.colonMat.color.copy(DIGIT_COLOR).multiplyScalar(DIGIT_GAIN * colonK);
 
     cam.position.copy(pos);
     cam.lookAt(tgt);
@@ -316,10 +317,10 @@ export class Bedroom {
     const focus = Math.max(3, -v.z);
 
     return {
-      exposure, vignette: 0.42, vigPow: 2.0, sat: 0.9, contrast: 1.04,
-      lift: [0.004, 0.0045, 0.006], gain: [1, 1, 1],
+      exposure: exposure * 1.06, vignette: 0.4, vigPow: 2.0, sat: 1.12, contrast: 1.05,
+      lift: [0.004, 0.009, 0.022], gain: [1, 1, 1],
       dof: { focus, cocScale, deadZone, maxCoc, radScale: 0.75 },
-      bloom: { strength: 0.38, radius: 0.45, threshold: 0.8 },
+      bloom: { strength: 0.5, radius: 0.5, threshold: 0.7 },
       grain: 0.013,
     };
   }

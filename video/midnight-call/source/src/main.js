@@ -6,7 +6,7 @@ import { Bedroom } from './bedroom.js';
 import { Motor } from './motor.js';
 import { Calendar } from './calendar.js';
 import { Overlay } from './overlay.js';
-import { FPS, seg, smooth, lerp } from './timeline.js';
+import { FPS, T, seg, smooth, lerp } from './timeline.js';
 
 const W = 1920, H = 1080;
 
@@ -51,14 +51,14 @@ async function init() {
     ctx.clearRect(0, 0, W, H);
     // which scenes are visible
     const layers = [];
-    if (t < 2.18) layers.push(bedroom);
-    if (t >= 1.9 && t < 5.5) layers.push(motor);
-    if (t >= 5.08 && t < 8.0) layers.push(calendar);
-    if (t >= 8.0) layers.push(bedroom);
+    if (t < T.x1[1]) layers.push(bedroom);
+    if (t >= T.m0 && t < T.x2[1]) layers.push(motor);
+    if (t >= T.c0 && t < T.cut) layers.push(calendar);
+    if (t >= T.cut) layers.push(bedroom);
     let mix = 0;
     if (layers.length === 2) {
-      if (t < 3) mix = smooth(seg(t, 1.92, 2.18));
-      else mix = smooth(seg(t, 5.1, 5.46));
+      if (t < T.x1[1]) mix = smooth(seg(t, T.x1[0], T.x1[1]));
+      else mix = smooth(seg(t, T.x2[0], T.x2[1]));
     }
     let grain = 0.03;
     const params = layers.map((sc) => sc.update(t));
