@@ -1,0 +1,17 @@
+{
+  "name": "midnight-call-video",
+  "private": true,
+  "type": "module",
+  "description": "10s silent social video: 'The midnight phone call that never happens' (Reliable).",
+  "scripts": {
+    "render": "node render.mjs --range 0-299 --out frames",
+    "encode": "./encode.sh frames ../midnight-call_1920x1080_30fps.mp4"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}
