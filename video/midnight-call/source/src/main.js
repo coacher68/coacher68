@@ -65,7 +65,7 @@ async function init() {
     layers.forEach((sc, i) => post.renderScene(sc, params[i], i));
     if (params.length === 2) grain = lerp(params[0].grain, params[1].grain, mix);
     else if (params.length) grain = params[0].grain;
-    overlay.draw(ctx, t, { motor: motor.anchors, cal: calendar.anchors });
+    overlay.draw(ctx, t, { motor, cal: calendar.anchors });
     post.final({ mix, fade: 1, grain, seed: frame * 1.618 });
     renderer.getContext().finish();
     return true;

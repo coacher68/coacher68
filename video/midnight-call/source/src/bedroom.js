@@ -294,8 +294,9 @@ export class Bedroom {
       this.setTime('159');
     } else {
       const k = easeInOutSine(seg(t, T.cut, DURATION));
-      pos = new THREE.Vector3(lerp(-2.0, -2.8, k), lerp(18.5, 17.8, k), lerp(52, 48.5, k));
-      tgt = new THREE.Vector3(lerp(-7.6, -7.8, k), lerp(-1.5, -1.6, k), lerp(-4.0, -4.4, k));
+      // framed higher than the opening so the two-line closing title has the lower third
+      pos = new THREE.Vector3(lerp(-2.6, -3.4, k), lerp(24.6, 23.6, k), lerp(62, 58.5, k));
+      tgt = new THREE.Vector3(lerp(-8.0, -8.3, k), lerp(-3.4, -3.6, k), lerp(-3.3, -3.6, k));
       // rack focus: clock -> phone
       const rf = easeInOutCubic(seg(t, T.rack[0], T.rack[1]));
       const clockPt = new THREE.Vector3(-12.0, 3.6, -12.5);

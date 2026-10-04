@@ -6,6 +6,7 @@ import { noiseTexture, canvas, makeNoise2, fbm } from './textures.js';
 import { T, seg, lerp, easeInOutSine, easeInOutCubic, smooth, mulberry32 } from './timeline.js';
 
 const GREEN = new THREE.Color(0x11a84b);
+const LENS_SHIFT = 390;   // px the motor slides right to clear the left data column
 const AMBER = new THREE.Color(0xffa51f);
 
 function grilleTexture() {
@@ -290,9 +291,10 @@ export class Motor {
     this.Hc = Hc;
   }
 
-  update(t) {
-    const cam = this.camera;
-    // camera: close "running normally" detail -> pull back to the 3/4 hero shot -> slow orbit
+  // Camera path as a pure function of time: close "running normally" detail ->
+  // pull back to the 3/4 hero shot -> slow orbit. The lens shifts right during the
+  // pull-back so the data panels have a clear column on the left.
+  cameraAt(t, cam) {
     const k1 = seg(t, T.m0, T.mPull[1]);
     const k2 = easeInOutSine(seg(t, T.mPull[0], T.mOut[1]));
     const close = { az: lerp(0.62, 0.5, k1), dist: lerp(1.3, 1.16, k1), el: lerp(0.15, 0.12, k1), tx: 0.3, ty: 0.7, tz: 0.15 };
@@ -304,8 +306,29 @@ export class Motor {
     const tgt = new THREE.Vector3(lerp(close.tx, wide.tx, p), lerp(close.ty, wide.ty, p), lerp(close.tz, wide.tz, p));
     cam.position.set(tgt.x - Math.sin(az) * Math.cos(el) * dist, tgt.y + Math.sin(el) * dist, tgt.z + Math.cos(az) * Math.cos(el) * dist);
     cam.lookAt(tgt);
+    const shift = LENS_SHIFT * easeInOutCubic(seg(t, T.mPull[0] + 0.25, T.mPull[1] + 0.15));
+    cam.setViewOffset(1920, 1080, -shift, 0, 1920, 1080);
     cam.updateMatrixWorld();
-    cam.updateProjectionMatrix();
+    return tgt;
+  }
+
+  // Screen position of a world point as seen at time t (used to place the warning marker).
+  screenAt(t, world) {
+    const cam = this._probe || (this._probe = this.camera.clone());
+    this.cameraAt(t, cam);
+    const p = world.clone().project(cam);
+    return { x: (p.x * 0.5 + 0.5) * 1920, y: (-p.y * 0.5 + 0.5) * 1080 };
+  }
+
+  // Where the early-warning marker lands: front of the motor frame, at the moment it appears.
+  warningScreenPoint() {
+    if (!this._warnPt) this._warnPt = this.screenAt(T.arrive, new THREE.Vector3(0.0, 0.66, 0.25));
+    return this._warnPt;
+  }
+
+  update(t) {
+    const cam = this.camera;
+    const tgt = this.cameraAt(t, cam);
     this.scene.updateMatrixWorld(true);
 
     this.anchors = {};

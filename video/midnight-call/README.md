@@ -11,9 +11,11 @@
 | Time | Shot |
 | --- | --- |
 | 0:00–0:02.5 | Bedside table in blue moonlight. An amber clock reads **1:59 AM**; the phone beside it is dark. Slow push-in. |
-| 0:02.5–0:08 | Close-up of a running motor, pulling back to the motor and pump. Vibration, temperature and operating-condition traces run green, develop amber changes, then converge into one amber early-warning indicator. No sensors are shown on the machinery. |
+| 0:02.5–0:08 | Close-up of a running motor, pulling back to the motor and pump. Three large condition panels (temperature, vibration, operating condition) stack on the left: traces run green, develop amber changes, then converge into one amber early-warning indicator on the motor. No sensors are shown on the machinery. |
 | 0:08–0:12.5 | The indicator becomes a work-order card on a daytime calendar: **EARLY WARNING** (amber) → **PLANNED REPAIR — 10:00 AM** (Reliable green) on Tuesday. Saturday is marked as the projected failure; a green span shows four days of lead time. |
-| 0:12.5–0:16.5 | Cut back to the bedside. **1:59 → 2:00 AM**. Focus pulls to the phone — it stays dark. **MORE WARNING TIME** (green) **CHANGES EVERYTHING.** holds for the last ~2.6 s. |
+| 0:12.5–0:16.5 | Cut back to the bedside. **1:59 → 2:00 AM**. Focus pulls to the phone — it stays dark. Two-line closing title, **MORE WARNING TIME** (green) / **CHANGES EVERYTHING.**, holds for the last ~2.6 s. |
+
+On-screen type is sized for phones (the frame shows at roughly 1/5 scale in a mobile feed): panel labels 34 px, card text 30–62 px, closing title 88 px.
 
 Color: Reliable green `#11a84b` for healthy/planned, amber for the early warning, orange-red for the projected failure; blue night, an industrial-blue motor with a safety-yellow guard, warm daylight on the calendar.
 
